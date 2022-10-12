@@ -2,7 +2,8 @@ var mongo = require('mongodb').MongoClient
 var bcrypt = require('bcryptjs')
 var salt = 10
 var ObjectId = require('mongodb').ObjectId
-var MONGO_URL = process.env.MONGODB_URI || 'mongodb://127.0.0.1/clock'
+// changed url to mongo for mongo docker container
+var MONGO_URL = process.env.MONGODB_URI || 'mongodb://mongo:27017/clock'
 var users = ''
 
 mongo.connect(MONGO_URL, function(err, conn) {
