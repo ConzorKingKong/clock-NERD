@@ -1,3 +1,10 @@
+
+setup:
+  addons:
+    - plan: mongo:3.5
+      as: mongo
 build:
   docker:
     web: Dockerfile
+  config:
+    NODE_ENV: production
