@@ -1,0 +1,19 @@
+version: "3"
+services:
+  nerdclock:
+      container_name: nerdclock
+      image: node
+      platform: linux/arm64/v8
+      restart: always
+      build: .
+      ports:
+        - "3000:3000"
+      depends_on:
+        - "mongo"
+      links:
+        - mongo
+  mongo:
+        container_name: mongo
+        image: mongo:3.6.22
+        ports:
+          - '27017:27017'
