@@ -2,7 +2,7 @@ version: "3"
 services:
   nerdclock:
       container_name: nerdclock
-      image: nerdclock
+      image: node
       restart: always
       build: .
       ports:
@@ -13,6 +13,6 @@ services:
         - mongo
   mongo:
         container_name: mongo
-        image: mongo:3.5
+        image: mongo:3.6.22
         ports:
           - '27017:27017'
