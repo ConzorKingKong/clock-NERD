@@ -23,12 +23,15 @@ export default class Logout extends Component {
   }
   render() {
     return (
-      <button
-        className="logout-button"
-        onClick={this.onButtonClick}
-      >
-        Logout
-      </button>
+      <div className="logout-wrapper">
+        <p>Welcome {this.props.username}</p>
+        <button
+          className="logout-button"
+          onClick={this.onButtonClick}
+        >
+          Logout
+        </button>
+      </div>
     );
   }
 }

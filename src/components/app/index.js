@@ -14,6 +14,7 @@ export default class App extends Component {
     super(props);
     this.state = {
       loggedIn: false,
+      username: '',
       times: [],
       date: new Date(),
       alarm: false,
@@ -26,10 +27,11 @@ export default class App extends Component {
   componentWillMount() {
     axios.get(`${ROOT_URL}loginstatus`)
       .then(res => {
-        const {loggedIn, times} = res.data;
+        const {loggedIn, times, username} = res.data;
         this.setState({
           times,
-          loggedIn
+          loggedIn,
+          username
         });
       })
       .catch(err => {
@@ -99,7 +101,8 @@ export default class App extends Component {
       date,
       alarm,
       alarmTime,
-      error
+      error,
+      username
     } = this.state;
     let displayHours = date.getHours();
     const displayMinutes = cleanNums(date.getMinutes());
@@ -120,6 +123,7 @@ export default class App extends Component {
         <Titlebar
           setAppState={this.setAppState}
           loggedIn={loggedIn}
+          username={username}
         />
         <h1>{error}</h1>
         <Clock

@@ -82,7 +82,7 @@ export default class Register extends Component {
     axios.post(`${ROOT_URL}signup`, {email: email.toLowerCase(), username: username.toLowerCase(), password}, {headers: {'Content-Type': 'application/json'}})
       .then(res => {
         const {data} = res;
-        this.props.setAppState({loggedIn: data.loggedIn, times: data.times});
+        this.props.setAppState({loggedIn: data.loggedIn, times: data.times, username: data.username});
         this.setState({
           email: '',
           username: '',

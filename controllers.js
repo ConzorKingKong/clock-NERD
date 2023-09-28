@@ -36,7 +36,7 @@ module.exports.signup = function(req, res) {
             res.status(401).send({error: 'Error', loggedIn: false})
           } else {
             req.session.id = user.ops[0]._id
-            res.status(200).send({times: user.ops[0].times, loggedIn: true})
+            res.status(200).send({times: user.ops[0].times, username: req.body.username, loggedIn: true})
           }
         })
       })
@@ -60,7 +60,7 @@ module.exports.signin = function(req, res) {
         }
         if (answer) {
           req.session.id = user._id
-          res.status(200).send({times: user.times, loggedIn: true})
+          res.status(200).send({times: user.times, username: user.username, loggedIn: true})
         } else {
           res.status(401).send({error: 'Incorrect password', loggedIn: false})
         }
@@ -185,7 +185,7 @@ module.exports.loginstatus = function(req, res) {
         delete req.session
         res.status(401).send({error: 'Error checking status. you have been logged out', loggedIn: false, times: []})
       } else {
-        res.status(200).send({times: user.times, loggedIn: true})
+        res.status(200).send({times: user.times, username: user.username, loggedIn: true})
       }
     })
   } else {

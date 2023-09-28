@@ -55,10 +55,11 @@ export default class Login extends Component {
     email = email.toLowerCase();
     axios.post(`${ROOT_URL}signin`, {email, password})
       .then(res => {
-        const {loggedIn, times} = res.data;
+        const {loggedIn, times, username} = res.data;
         setAppState({
           loggedIn,
-          times
+          times,
+          username
         });
         this.setState({
           email: '',

@@ -48,7 +48,7 @@ export default class Titlebar extends Component {
       loginButton,
       registerButton
     } = this.state;
-    const {loggedIn, setAppState} = this.props;
+    const {loggedIn, setAppState, username} = this.props;
     return (
       <div className="titlebar-wrapper">
         { !loggedIn &&
@@ -91,7 +91,7 @@ export default class Titlebar extends Component {
           }
         </div>
         }
-        { loggedIn && <Logout setAppState={setAppState} /> }
+        { loggedIn && <Logout username={username} setAppState={setAppState} /> }
       </div>
     );
   }
