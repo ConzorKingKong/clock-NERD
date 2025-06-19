@@ -68,12 +68,12 @@ jobs:
             context: ./
             file: ./Dockerfile
             push: true
-            tags: ${{ secrets.DOCKERHUB_USERNAME }}/NERDClock:latest
+            tags: ${{ secrets.DOCKERHUB_USERNAME }}/nerdclock:latest
           
         - name: Run the image in a container
           uses: addnab/docker-run-action@v3
           with:
-            image: ${{ secrets.DOCKERHUB_USERNAME }}/NERDClock:latest
+            image: ${{ secrets.DOCKERHUB_USERNAME }}/nerdclock:latest
             run: |
               echo "runing the docker image"
               echo ${{ steps.docker_build.outputs.digest }}
