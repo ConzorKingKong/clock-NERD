@@ -5,9 +5,9 @@ name: CI-CD
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   
@@ -69,6 +69,7 @@ jobs:
             file: ./Dockerfile
             push: true
             tags: ${{ secrets.DOCKERHUB_USERNAME }}/nerdclock:latest
+            platforms: linux/amd64,linux/arm64/v8
           
         - name: Run the image in a container
           uses: addnab/docker-run-action@v3
