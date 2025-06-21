@@ -1,7 +1,7 @@
 {
-  "name": "doc-learning-react",
+  "name": "clock-nerd",
   "version": "1.0.0",
-  "description": "learning react from the docs",
+  "description": "A full-stack clock application",
   "main": "./src/index.js",
   "scripts": {
     "start": "npm run build && node server.js",
