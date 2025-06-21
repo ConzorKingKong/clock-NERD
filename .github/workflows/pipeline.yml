@@ -48,6 +48,19 @@ jobs:
       steps:
         - name: checkout repo
           uses: actions/checkout@v2
+        
+        - name: Add secrets to Task Definition
+          run: |
+            sed -i 's/<awsid>/$AWSID/g' .aws/task-definition.json 
+            sed -i 's/<mongodb_uri>/$MONGODB_URI/g' .aws/task-definition.json
+            sed -i 's/<api_url>/$API_URL/g' .aws/task-definition.json
+            sed -i 's/<super_secret>/$SUPER_SECRET/g' .aws/task-definition.json
+          env:
+            AWSID: ${{secrets.AWSID}}
+            MONGODB_URI: ${{secrets.MONGODB_URI}}
+            API_URL: ${{secrets.API_URL}}
+            SUPER_SECRET: ${{secrets.SUPER_SECRET}}
+
 
         - name: Set up QEMU
           uses: docker/setup-qemu-action@v1
@@ -67,6 +80,7 @@ jobs:
           uses: aws-actions/amazon-ecr-login@v2
       
         - name: Build and push
+          id: build-and-push
           uses: docker/build-push-action@v2
           with:
             context: ./
@@ -74,3 +88,10 @@ jobs:
             push: true
             tags: ${{ steps.login-ecr.outputs.registry }}/clocknerd:latest
             platforms: linux/amd64,linux/arm64/v8
+
+        - name: Deploy to ECS
+          run: |
+            aws ecs update-service \
+              --cluster ${{ secrets.ECS_CLUSTER }} \
+              --service ${{ secrets.ECS_SERVICE }} \
+              --force-new-deployment
