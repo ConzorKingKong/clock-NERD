@@ -1,72 +1,70 @@
-var mongo = require('mongodb').MongoClient
+var { MongoClient, ObjectId } = require('mongodb')
 var bcrypt = require('bcryptjs')
 var salt = 10
-var ObjectId = require('mongodb').ObjectId
 // changed url to mongo for mongo docker container
 var MONGO_URL = process.env.MONGODB_URI || 'mongodb://mongo:27017/clock'
-var users = ''
+var client = null
+var db = null
+var users = null
 
-mongo.connect(MONGO_URL, function(err, conn) {
-  if (err)  {
-    console.log(err)
-    return
-  }
-  users = conn.collection('users')
+// Connect to MongoDB with new driver API
+MongoClient.connect(MONGO_URL).then((mongoClient) => {
+  client = mongoClient
+  db = client.db() // Gets the default database from the connection string
+  users = db.collection('users')
+  console.log('Connected to MongoDB')
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err)
 })
 
-module.exports.signup = function(req, res) {
-  users.findOne({email: req.body.email}, function(err, user) {
+module.exports.signup = async function(req, res) {
+  if (!users) {
+    console.log("Database not connected yet")
+    return res.status(503).send({error: 'Database not ready', loggedIn: false})
+  }
+  try {
+    const user = await users.findOne({email: req.body.email})
     if (user !== null) {
       res.status(401).send({error: 'User already exists!', loggedIn: false})
     } else {
-      var hashedPassword = bcrypt.hash(req.body.password, salt, function(err, hash) {
-        if (err) {
-          console.log(err)
-          return
-        }
-        users.insert({
-          created: Date.now(),
-          email: req.body.email,
-          username: req.body.username,
-          password: hash,
-          times: []
-        }, function(err, user) {
-          if (err) {
-            console.log(err)
-            res.status(401).send({error: 'Error', loggedIn: false})
-          } else {
-            req.session.id = user.ops[0]._id
-            res.status(200).send({times: user.ops[0].times, username: req.body.username, loggedIn: true})
-          }
-        })
+      const hash = await bcrypt.hash(req.body.password, salt)
+      const result = await users.insertOne({
+        created: Date.now(),
+        email: req.body.email,
+        username: req.body.username,
+        password: hash,
+        times: []
       })
+      req.session.id = result.insertedId
+      res.status(200).send({times: [], username: req.body.username, loggedIn: true})
     }
-  })
+  } catch (err) {
+    console.log("ERROR", err)
+    res.status(401).send({error: 'Error', loggedIn: false})
+  }
 }
 
-module.exports.signin = function(req, res) {
-  users.findOne({email: req.body.email}, function(err, user) {
-    if (err) {
-      console.log(err)
-      res.status(401).send({error: 'Error', loggedIn: false})
-    } else if (user === null) {
-      res.status(401)
-      res.json({'error': 'No user', 'loggedIn': false})
+module.exports.signin = async function(req, res) {
+  if (!users) {
+    return res.status(503).send({error: 'Database not ready', loggedIn: false})
+  }
+  try {
+    const user = await users.findOne({email: req.body.email})
+    if (user === null) {
+      res.status(401).json({'error': 'No user', 'loggedIn': false})
     } else {
-      bcrypt.compare(req.body.password, user.password, function(err, answer) {
-        if (err) {
-          console.log(err)
-          return
-        }
-        if (answer) {
-          req.session.id = user._id
-          res.status(200).send({times: user.times, username: user.username, loggedIn: true})
-        } else {
-          res.status(401).send({error: 'Incorrect password', loggedIn: false})
-        }
-      })
+      const answer = await bcrypt.compare(req.body.password, user.password)
+      if (answer) {
+        req.session.id = user._id
+        res.status(200).send({times: user.times, username: user.username, loggedIn: true})
+      } else {
+        res.status(401).send({error: 'Incorrect password', loggedIn: false})
+      }
     }
-  })
+  } catch (err) {
+    console.log(err)
+    res.status(401).send({error: 'Error', loggedIn: false})
+  }
 }
 
 module.exports.signout = function(req, res) {
@@ -79,115 +77,95 @@ module.exports.signout = function(req, res) {
   }
 }
 
-module.exports.addtime = function(req, res) {
+module.exports.addtime = async function(req, res) {
   if (!req.session.id) {
     res.status(401).send({error: 'You must be logged in', loggedIn: false})
     return
   }
+  if (!users) {
+    return res.status(503).send({error: 'Database not ready', loggedIn: false})
+  }
   var newTime = req.body
   var cont = true
-  if (newTime._id !== '') {
-    newTime._id = new ObjectId(newTime._id)
-    users.findOne({_id: new ObjectId(req.session.id)}, function(err, user) {
-      if (err) {
-        console.log(err)
-        res.status(401).send({error: 'Error', loggedIn: true})
-      } else {
-        user.times.forEach(function(time) {
-          if (time.hours === newTime.hours && time.minutes === newTime.minutes && time.seconds === newTime.seconds && time.ampm === newTime.ampm && time._id.toString() !== newTime._id.toString()) {
-            cont = false
-            res.status(400).send({error: 'Time already exists. Please edit existing time to add new days', loggedIn: true})
-            return
-          }
-        })
-        if (cont) {
-          users.findOneAndUpdate({_id: new ObjectId(req.session.id), "times._id": new ObjectId(newTime._id)}, {$set: {"times.$": newTime}}, function(err, answer) {
-            if (err) {
-              console.log(err)
-              res.status(401).send({error: 'Error', loggedIn: true})
-            } else {
-              users.findOne({_id: new ObjectId(req.session.id)}, function(err, user) {
-                if (err) {
-                  console.log(err)
-                  res.status(401).send({error: 'Error', loggedIn: true})
-                } else {
-                  res.status(200).send(user.times)
-                }
-              })
-            }
-          })
+  try {
+    if (newTime._id !== '') {
+      newTime._id = new ObjectId(newTime._id)
+      const user = await users.findOne({_id: new ObjectId(req.session.id)})
+      user.times.forEach(function(time) {
+        if (time.hours === newTime.hours && time.minutes === newTime.minutes && time.seconds === newTime.seconds && time.ampm === newTime.ampm && time._id.toString() !== newTime._id.toString()) {
+          cont = false
+          res.status(400).send({error: 'Time already exists. Please edit existing time to add new days', loggedIn: true})
+          return
         }
+      })
+      if (cont) {
+        await users.findOneAndUpdate(
+          {_id: new ObjectId(req.session.id), "times._id": new ObjectId(newTime._id)},
+          {$set: {"times.$": newTime}}
+        )
+        const updatedUser = await users.findOne({_id: new ObjectId(req.session.id)})
+        res.status(200).send(updatedUser.times)
       }
-    })
-  } else {
-    newTime._id = new ObjectId()
-    users.findOne({_id: new ObjectId(req.session.id)}, function(err, user) {
-      if (err) {
-        console.log(err)
-        res.status(401).send({error: 'Error', loggedIn: true})
-      } else {
-        user.times.forEach(function(time) {
-          if (time.hours === newTime.hours && time.minutes === newTime.minutes && time.seconds === newTime.seconds && time.ampm === newTime.ampm) {
-            cont = false
-            res.status(400).send({error: 'Time already exists. Please edit existing time to add new days', loggedIn: true})
-            return
-          }
-        })
-        if (cont) {
-          users.findOneAndUpdate({_id: new ObjectId(req.session.id)}, {$addToSet: {times: newTime} }, function(err, user) {
-            if (err) {
-              console.log(err)
-              res.status(401).send({error: 'Error', loggedIn: true})
-            } else {
-              users.findOne({_id: new ObjectId(req.session.id)}, function(err, user) {
-                if (err) {
-                  console.log(err)
-                  res.status(401).send({error: 'Error', loggedIn: true})
-                } else {
-                  res.status(200).send(user.times)
-                }
-              })
-            }
-          })
+    } else {
+      newTime._id = new ObjectId()
+      const user = await users.findOne({_id: new ObjectId(req.session.id)})
+      user.times.forEach(function(time) {
+        if (time.hours === newTime.hours && time.minutes === newTime.minutes && time.seconds === newTime.seconds && time.ampm === newTime.ampm) {
+          cont = false
+          res.status(400).send({error: 'Time already exists. Please edit existing time to add new days', loggedIn: true})
+          return
         }
+      })
+      if (cont) {
+        await users.findOneAndUpdate(
+          {_id: new ObjectId(req.session.id)},
+          {$addToSet: {times: newTime}}
+        )
+        const updatedUser = await users.findOne({_id: new ObjectId(req.session.id)})
+        res.status(200).send(updatedUser.times)
       }
-    })
+    }
+  } catch (err) {
+    console.log(err)
+    res.status(401).send({error: 'Error', loggedIn: true})
   }
 }
 
-module.exports.deletetime = function(req, res) {
-  if (!req.session.id) res.status(401).send("You are not signed in")
-  if (!req.body.id) res.status(404).send("No time ID was given")
-  users.findOneAndUpdate(
-    {_id: new ObjectId(req.session.id)},
-    {$pull: {times: {_id: new ObjectId(req.body.id)}}}, function(err, newTimes) {
-    if (err) {
-      console.log(err)
-      res.status(401).send("Error")
+module.exports.deletetime = async function(req, res) {
+  if (!req.session.id) return res.status(401).send("You are not signed in")
+  if (!req.body.id) return res.status(404).send("No time ID was given")
+  if (!users) return res.status(503).send("Database not ready")
+  try {
+    const result = await users.findOneAndUpdate(
+      {_id: new ObjectId(req.session.id)},
+      {$pull: {times: {_id: new ObjectId(req.body.id)}}},
+      {returnDocument: 'after'} // Return the updated document
+    )
+    if (result && result.value) {
+      res.status(200).send({value: result.value})
+    } else {
+      res.status(404).send("User not found")
     }
-    if (newTimes) {
-      const {times} = newTimes.value
-      const cleanTimes = times.filter(t => {
-        return t._id.toString() !== req.body.id
-        })
-      newTimes.value.times = cleanTimes
-      res.status(200).send(newTimes)
-    }
-  })
+  } catch (err) {
+    console.log(err)
+    res.status(401).send("Error")
+  }
 }
 
-module.exports.loginstatus = function(req, res) {
+module.exports.loginstatus = async function(req, res) {
+  if (!users) {
+    return res.status(503).send({error: 'Database not ready', loggedIn: false, times: []})
+  }
   if (req.session.id) {
-    users.findOne({_id: new ObjectId(req.session.id)}, function(err, user) {
-      if (err) {
-        console.log(err)
-        delete req.session.id
-        delete req.session
-        res.status(401).send({error: 'Error checking status. you have been logged out', loggedIn: false, times: []})
-      } else {
-        res.status(200).send({times: user.times, username: user.username, loggedIn: true})
-      }
-    })
+    try {
+      const user = await users.findOne({_id: new ObjectId(req.session.id)})
+      res.status(200).send({times: user.times, username: user.username, loggedIn: true})
+    } catch (err) {
+      console.log(err)
+      delete req.session.id
+      delete req.session
+      res.status(401).send({error: 'Error checking status. you have been logged out', loggedIn: false, times: []})
+    }
   } else {
     res.status(200).send({loggedIn: false, times: []})
   }

@@ -13,6 +13,6 @@ services:
         - mongo
   mongo:
         container_name: mongo
-        image: mongo:3.6.22
+        image: mongo:8.0.10
         ports:
           - '27017:27017'

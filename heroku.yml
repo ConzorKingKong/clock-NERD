@@ -1,7 +1,0 @@
-
-build:
-  docker:
-    web: Dockerfile
-    mongo: mongo/Dockerfile
-  config:
-    NODE_ENV: production
