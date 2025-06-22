@@ -141,8 +141,8 @@ module.exports.deletetime = async function(req, res) {
       {$pull: {times: {_id: new ObjectId(req.body.id)}}},
       {returnDocument: 'after'} // Return the updated document
     )
-    if (result && result.value) {
-      res.status(200).send({value: result.value})
+    if (result) {
+      res.status(200).send({value: result})
     } else {
       res.status(404).send("User not found")
     }

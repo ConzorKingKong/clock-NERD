@@ -48,19 +48,6 @@ jobs:
       steps:
         - name: checkout repo
           uses: actions/checkout@v2
-        
-        - name: Add secrets to Task Definition
-          run: |
-            sed -i 's/<awsid>/$AWSID/g' .aws/task-definition.json 
-            sed -i 's/<mongodb_uri>/$MONGODB_URI/g' .aws/task-definition.json
-            sed -i 's/<api_url>/$API_URL/g' .aws/task-definition.json
-            sed -i 's/<super_secret>/$SUPER_SECRET/g' .aws/task-definition.json
-          env:
-            AWSID: ${{secrets.AWSID}}
-            MONGODB_URI: ${{secrets.MONGODB_URI}}
-            API_URL: ${{secrets.API_URL}}
-            SUPER_SECRET: ${{secrets.SUPER_SECRET}}
-
 
         - name: Set up QEMU
           uses: docker/setup-qemu-action@v1
